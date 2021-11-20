@@ -1,12 +1,9 @@
 from django.db import models
 
 """
-Model wich represent a company (p. ex. Amazon, E-commerce and cloud computing services ).
+Model wich represent a company (p. ex. unique_code_from_amazon, Amazon, true ).
 """
 class Company(models.Model):
-    code = models.CharField(max_length=18, unique=True)
+    code = models.CharField(max_length=20, unique=True)
     name = models.TextField(max_length=200)
-    active = models.BooleanField(auto_now_add=True)
-
-    def __str__(self):
-            return self.name
+    active = models.BooleanField(default=True)
