@@ -4,7 +4,7 @@ from ..services.reports import Resume
 
 class CompanyResumView(APIView):
     """
-        View dedicated to return a basic resume from the transactions
+        View dedicated to return a resume from the transactions of a company
     """
 
     def get(self, request, code):

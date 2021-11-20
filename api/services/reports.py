@@ -3,8 +3,9 @@ from django.db.models.functions import Cast
 from django.http import JsonResponse
 from django.db.models import Q
 from api.models.company import Company
-from api.seriealizers.s_companies import SerializedCompany
 from rest_framework import status
+import json
+from django.core.serializers.json import DjangoJSONEncoder
 
 
 from api.models.transaction import Transaction
@@ -102,3 +103,22 @@ class Resume:
         except Exception as e:
             return JsonResponse({'Error':"Something went bad, try again later"}, status=status.HTTP_400_BAD_REQUEST)
 
+
+    def per_month(self):
+        """
+        Resume of the transactions per month with the next data:
+            - Number of month
+            - Number of transactions in the month
+            - Amount collected in the month
+        """
+        try:
+            transactions_active_closed = Transaction.objects.filter(self.active_companies & self.closed).annotate(as_float=Cast('price', FloatField()))
+            transactions_collected = transactions_active_closed.filter(self.charged_t)
+            transactions_rejected = transactions_active_closed.filter(self.charged_f)
+
+            by_day = transactions_collected.values('date__month').annotate(number_of_transactions=Count('date__month'),amount_collected=Sum('as_float')).order_by('date__month')
+            print(by_day)
+            data = list(by_day)
+            return JsonResponse(data,safe=False,status=status.HTTP_200_OK)
+        except Exception as e:
+            return JsonResponse({'Error':"Something went bad, try again later"}, status=status.HTTP_400_BAD_REQUEST)
