@@ -1,9 +1,8 @@
-from django.db.models import Count, Max, Min, Sum, FloatField, Avg
+from django.db.models import Count, Max, Sum, FloatField, Avg
 from django.db.models.functions import Cast
 from django.http import JsonResponse
 from django.db.models import Q
 from api.models.company import Company
-from api.seriealizers.s_companies import SerializedCompany
 from rest_framework import status
 
 
@@ -93,7 +92,7 @@ class Resume:
                     'daily_average':ave_2,
                 },
                 'better_day':{
-                    'date':better_day[0]['date__date'].strftime("%m/%d/%Y"),
+                    'date':better_day[0]['date__date'].strftime("%m-%d-%Y"),
                     'transactions':better_day[0]['number'],
                     'collected':better_day[0]['total']
                 }
@@ -102,3 +101,44 @@ class Resume:
         except Exception as e:
             return JsonResponse({'Error':"Something went bad, try again later"}, status=status.HTTP_400_BAD_REQUEST)
 
+    def per_month(self):
+        """
+        Resume of the transactions per month with the next data:
+            - Number of month
+            - Number of transactions in the month
+            - Amount collected in the month
+        """
+        try:
+            transactions_active_closed = Transaction.objects.filter(self.active_companies & self.closed).annotate(as_float=Cast('price', FloatField()))
+            transactions_collected = transactions_active_closed.filter(self.charged_t)
+            transactions_rejected = transactions_active_closed.filter(self.charged_f)
+
+            by_day = transactions_collected.values('date__month').annotate(number_of_transactions=Count('date__month'),amount_collected=Sum('as_float')).order_by('date__month')
+            print(by_day)
+            data = list(by_day)
+            return JsonResponse(data,safe=False,status=status.HTTP_200_OK)
+        except Exception as e:
+            return JsonResponse({'Error':"Something went bad, try again later"}, status=status.HTTP_400_BAD_REQUEST)
+
+    def company_vs_company_transactions_approved(self):
+        try:
+            transactions_active_closed = Transaction.objects.filter(self.active_companies & self.closed).annotate(as_float=Cast('price', FloatField())).select_related('company').values('company__name')
+            transactions_collected = transactions_active_closed.filter(self.charged_t)
+
+            approved_by_company = transactions_collected.annotate(number_of_sales=Count('folio'),amount_collected=Sum('as_float')).order_by('company__name')
+            return JsonResponse(list(approved_by_company),safe=False,status=status.HTTP_200_OK)
+        except Exception as e:
+            print(e)
+            return JsonResponse({'Error':"Something went bad, try again later"}, status=status.HTTP_400_BAD_REQUEST)
+
+    
+    def company_vs_company_transactions_rejected(self):
+        try:
+            transactions_active_closed = Transaction.objects.filter(self.active_companies & self.closed).annotate(as_float=Cast('price', FloatField())).select_related('company').values('company__name')
+            transactions_rejected = transactions_active_closed.filter(self.charged_f)
+
+            rejected_by_company = transactions_rejected.annotate(number_of_rejections=Count('folio'),amount_lost=Sum('as_float')).order_by('company__name')
+            return JsonResponse(list(rejected_by_company),safe=False,status=status.HTTP_200_OK)
+        except Exception as e:
+            print(e)
+            return JsonResponse({'Error':"Something went bad, try again later"}, status=status.HTTP_400_BAD_REQUEST)

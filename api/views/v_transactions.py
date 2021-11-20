@@ -9,3 +9,11 @@ class BasicResumView(APIView):
 
     def get(self,request):
         return Resume().basic_resume()
+
+class ByMonthResumView(APIView):
+    """
+        View dedicated to return a resume from the transactions by month
+    """
+
+    def get(self,request):
+        return Resume().per_month()
