@@ -121,6 +121,12 @@ class Resume:
             return JsonResponse({'Error':"Something went bad, try again later"}, status=status.HTTP_400_BAD_REQUEST)
 
     def company_vs_company_transactions_approved(self):
+        """
+        Resume of the transactions approved per company with the next data:
+            - Name of company
+            - Number of transactions approved
+            - Amount collected in the month
+        """
         try:
             transactions_active_closed = Transaction.objects.filter(self.active_companies & self.closed).annotate(as_float=Cast('price', FloatField())).select_related('company').values('company__name')
             transactions_collected = transactions_active_closed.filter(self.charged_t)
@@ -128,11 +134,16 @@ class Resume:
             approved_by_company = transactions_collected.annotate(number_of_sales=Count('folio'),amount_collected=Sum('as_float')).order_by('company__name')
             return JsonResponse(list(approved_by_company),safe=False,status=status.HTTP_200_OK)
         except Exception as e:
-            print(e)
             return JsonResponse({'Error':"Something went bad, try again later"}, status=status.HTTP_400_BAD_REQUEST)
 
     
     def company_vs_company_transactions_rejected(self):
+        """
+        Resume of the transactions rejected per company with the next data:
+            - Name of company
+            - Number of transactions rejected
+            - Amount collected in the month
+        """
         try:
             transactions_active_closed = Transaction.objects.filter(self.active_companies & self.closed).annotate(as_float=Cast('price', FloatField())).select_related('company').values('company__name')
             transactions_rejected = transactions_active_closed.filter(self.charged_f)
@@ -140,5 +151,4 @@ class Resume:
             rejected_by_company = transactions_rejected.annotate(number_of_rejections=Count('folio'),amount_lost=Sum('as_float')).order_by('company__name')
             return JsonResponse(list(rejected_by_company),safe=False,status=status.HTTP_200_OK)
         except Exception as e:
-            print(e)
             return JsonResponse({'Error':"Something went bad, try again later"}, status=status.HTTP_400_BAD_REQUEST)
